@@ -1,5 +1,4 @@
-data/*
-!data/*.dvc             
+         
 venv/
 .env
 .DS_Store
