@@ -1,0 +1,4 @@
+[core]
+    remote = origin
+['remote "origin"']
+    url = https://dagshub.com/rizerize-1/DVC_Fraud_Detection.dvc
