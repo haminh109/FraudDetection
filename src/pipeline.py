@@ -2,16 +2,12 @@ import pandas as pd
 import numpy as np
 import joblib
 import logging
-<<<<<<< HEAD
 import json
 from datetime import datetime
-=======
->>>>>>> 42deab75f6c745885fdac8dd40c0b20f5075d102
 from pathlib import Path
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
-<<<<<<< HEAD
 from preprocessing import (
     optimize_memory, drop_useless_features,handle_infinite_and_nan, MissingValueHandler, 
     SkewedFeatureTransformer, CategoricalLevelManager, FrequencyEncoder
@@ -68,7 +64,6 @@ class FraudMLOpsPipeline:
         y_train = X_train_clean[self.target_col]
         y_val = X_val_clean[self.target_col]
         
-=======
 # Import các transformer
 from preprocessing import (
     optimize_memory,
@@ -157,12 +152,10 @@ class FraudMLOpsPipeline:
         y_train = X_train_clean[self.target_col]
         y_val = X_val_clean[self.target_col]
 
->>>>>>> 42deab75f6c745885fdac8dd40c0b20f5075d102
         X_train_final = X_train_clean.drop(columns=[self.target_col])
         X_val_final = X_val_clean.drop(columns=[self.target_col])
 
         self.save_everything(X_train_final, y_train, X_val_final, y_val)
-<<<<<<< HEAD
         
         return X_train_final, y_train, X_val_final, y_val
     
@@ -178,7 +171,6 @@ class FraudMLOpsPipeline:
         
         x_train_path = data_dir / "X_train.parquet"
         X_train.to_parquet(x_train_path, index=False)
-=======
         return X_train_final, y_train, X_val_final, y_val
 
     def save_everything(self, X_train, y_train, X_val, y_val):
@@ -190,12 +182,10 @@ class FraudMLOpsPipeline:
         joblib.dump(self.pipeline, artifact_dir / "fraud_pipeline.pkl")
 
         X_train.to_parquet(data_dir / "X_train.parquet", index=False)
->>>>>>> 42deab75f6c745885fdac8dd40c0b20f5075d102
         y_train.to_frame().to_parquet(data_dir / "y_train.parquet", index=False)
         X_val.to_parquet(data_dir / "X_val.parquet", index=False)
         y_val.to_frame().to_parquet(data_dir / "y_val.parquet", index=False)
 
-<<<<<<< HEAD
         logger.warning(f"Pipeline: {pipeline_path.absolute()}")
         logger.warning(f"Data folder: {data_dir.absolute()}")
 
@@ -216,7 +206,6 @@ if __name__ == "__main__":
         df = pd.read_csv(data_path)
         ops_pipe = FraudMLOpsPipeline(target_col="isFraud", time_col="TransactionDT")
         X_train, y_train, X_val, y_val = ops_pipe.run_train_flow(df)
-=======
         logger.info(f" Pipeline saved: artifacts/fraud_pipeline.pkl")
         logger.info(f" Featured data saved to: data/processed/")
 
@@ -232,4 +221,3 @@ if __name__ == "__main__":
 
     pipeline = FraudMLOpsPipeline()
     X_train, y_train, X_val, y_val = pipeline.run_train_flow(df)
->>>>>>> 42deab75f6c745885fdac8dd40c0b20f5075d102
