@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY src ./src
 COPY models ./models
+COPY artifacts ./artifacts
 
 EXPOSE 8000
 
