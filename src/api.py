@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from src.inference_pipeline import RawInferencePipeline
 
 
 logging.basicConfig(
@@ -19,6 +20,10 @@ MODEL_PATH = Path("models/model.pkl")
 
 class PredictionRequest(BaseModel):
     records: list[dict[str, Any]] = Field(..., description="List of feature dictionaries")
+
+class RawPredictionRequest(BaseModel):
+    records: list[dict[str, Any]]
+    context: list[dict[str, Any]] | None = None
 
 
 def sanitize_feature_name(name: str) -> str:
@@ -114,6 +119,12 @@ app = FastAPI(
     description="Live inference API for fraud probability prediction."
 )
 
+raw_pipeline = RawInferencePipeline(
+    preprocessor_path="models/preprocessor_v1.pkl",
+    feature_artifact_path="artifacts/fe_artifact.pkl",
+    model_artifact_path="models/model.pkl",
+)
+
 
 @app.get("/health")
 def health():
@@ -155,4 +166,27 @@ def predict(request: PredictionRequest):
         raise
     except Exception as e:
         logging.exception("Prediction failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/predict_raw")
+def predict_raw(request: RawPredictionRequest):
+    try:
+        if not request.records:
+            raise HTTPException(status_code=400, detail="records must not be empty")
+
+        results = raw_pipeline.predict_raw(
+            records=request.records,
+            context=request.context,
+        )
+
+        return {
+            "n_records": len(results),
+            "results": results,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("Raw prediction failed")
         raise HTTPException(status_code=500, detail=str(e))
