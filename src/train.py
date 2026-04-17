@@ -29,6 +29,7 @@ import mlflow.xgboost
 import xgboost as xgb
 from catboost import CatBoostClassifier
 from mlflow.models import infer_signature
+from src.validation import validate_train_validation_inputs
 
 try:
     import optuna
@@ -405,6 +406,7 @@ def main():
 
     X_train, X_val, feature_name_mapping = sanitize_feature_columns(X_train, X_val)
     X_train, X_val, dropped_constant_cols = drop_constant_features(X_train, X_val)
+    validate_train_validation_inputs(X_train, X_val, y_train, y_val)
 
     if not np.isfinite(X_train.to_numpy()).all():
         raise ValueError("X_train contains non-finite values (inf or -inf).")

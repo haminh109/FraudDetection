@@ -8,6 +8,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from src.inference_pipeline import RawInferencePipeline
+from src.validation import validate_feature_matrix, validate_model_artifact
 
 
 logging.basicConfig(
@@ -20,6 +21,7 @@ MODEL_PATH = Path("models/model.pkl")
 
 class PredictionRequest(BaseModel):
     records: list[dict[str, Any]] = Field(..., description="List of feature dictionaries")
+
 
 class RawPredictionRequest(BaseModel):
     records: list[dict[str, Any]]
@@ -40,13 +42,7 @@ def load_artifact(model_path: Path) -> dict[str, Any]:
         raise FileNotFoundError(f"Model artifact not found: {model_path}")
 
     artifact = joblib.load(model_path)
-
-    required_keys = {"model_name", "model", "threshold"}
-    missing_keys = required_keys - set(artifact.keys())
-    if missing_keys:
-        raise ValueError(f"Model artifact missing keys: {missing_keys}")
-
-    return artifact
+    return validate_model_artifact(artifact)
 
 
 def apply_feature_mapping(
@@ -93,8 +89,7 @@ def prepare_features(df: pd.DataFrame, artifact: dict[str, Any]) -> pd.DataFrame
 
     X = apply_feature_mapping(X, feature_name_mapping, expected_feature_names)
     X = X.replace([np.inf, -np.inf], np.nan).fillna(0.0).astype("float32")
-
-    return X
+    return validate_feature_matrix(X, dataset_name="api feature matrix")
 
 
 def get_probabilities(model: Any, X: pd.DataFrame) -> np.ndarray:

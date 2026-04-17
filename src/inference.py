@@ -7,6 +7,7 @@ from typing import Any
 import joblib
 import numpy as np
 import pandas as pd
+from src.validation import validate_feature_matrix, validate_model_artifact
 
 
 logging.basicConfig(
@@ -56,13 +57,7 @@ def load_artifact(model_path: Path) -> dict[str, Any]:
         raise FileNotFoundError(f"Model artifact not found: {model_path}")
 
     artifact = joblib.load(model_path)
-
-    required_keys = {"model_name", "model", "threshold"}
-    missing_keys = required_keys - set(artifact.keys())
-    if missing_keys:
-        raise ValueError(f"Model artifact missing keys: {missing_keys}")
-
-    return artifact
+    return validate_model_artifact(artifact)
 
 
 def load_input_data(input_path: str | None, input_json: str | None) -> pd.DataFrame:
@@ -140,10 +135,8 @@ def prepare_features(df: pd.DataFrame, artifact: dict[str, Any]) -> pd.DataFrame
     feature_name_mapping = artifact.get("feature_name_mapping")
 
     X = apply_feature_mapping(X, feature_name_mapping, expected_feature_names)
-
     X = X.replace([np.inf, -np.inf], np.nan).fillna(0.0).astype("float32")
-
-    return X
+    return validate_feature_matrix(X, dataset_name="inference feature matrix")
 
 
 def get_probabilities(model: Any, X: pd.DataFrame) -> np.ndarray:

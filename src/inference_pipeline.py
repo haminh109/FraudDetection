@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Any
 
 import joblib
@@ -9,6 +8,7 @@ import sys
 import __main__
 from src import preprocess as preprocess_module
 from src.feature_runtime import FraudFeatureBuilder
+from src.validation import validate_feature_matrix, validate_model_artifact
 
 # Register old module paths for backward compatibility with pickled artifacts
 sys.modules['feature_runtime'] = sys.modules['src.feature_runtime']
@@ -29,7 +29,7 @@ class RawInferencePipeline:
     ):
         self.preprocessor = joblib.load(preprocessor_path)
         self.feature_builder = FraudFeatureBuilder.load(feature_artifact_path)
-        self.model_artifact = joblib.load(model_artifact_path)
+        self.model_artifact = validate_model_artifact(joblib.load(model_artifact_path))
 
         self.model = self.model_artifact["model"]
         self.threshold = float(self.model_artifact["threshold"])
@@ -105,6 +105,7 @@ class RawInferencePipeline:
 
         featured = pd.concat(featured_rows, axis=0).reset_index(drop=True)
         X = self._align_features(featured)
+        X = validate_feature_matrix(X, dataset_name="raw inference features")
 
         if hasattr(self.model, "predict_proba"):
             proba = self.model.predict_proba(X)[:, 1]

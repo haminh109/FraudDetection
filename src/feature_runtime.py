@@ -1,6 +1,5 @@
-import json
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -79,7 +78,13 @@ class FraudFeatureBuilder:
         card1_amt_std = amt.groupby(card1).std().fillna(0.0).to_dict()
         card1_amt_median = amt.groupby(card1).median().to_dict()
         card1_txn_count = card1.value_counts(dropna=False).astype(float).to_dict()
-        card1_addr1_unique = df.assign(card1_key=card1, addr1_key=addr1).groupby("card1_key")["addr1_key"].nunique().astype(float).to_dict()
+        card1_addr1_unique = (
+            df.assign(card1_key=card1, addr1_key=addr1)
+            .groupby("card1_key")["addr1_key"]
+            .nunique()
+            .astype(float)
+            .to_dict()
+        )
         addr1_txn_count = addr1.value_counts(dropna=False).astype(float).to_dict()
 
         pair_key = (card1 + "__" + addr1)
@@ -242,14 +247,16 @@ class FraudFeatureBuilder:
         current_module = sys.modules[__name__]
         sys.modules['feature_runtime'] = current_module
         __main__.FraudFeatureBuilder = cls
-        
         try:
             payload = joblib.load(path)
         finally:
             # Clean up if needed
-            if 'feature_runtime' in sys.modules and sys.modules['feature_runtime'] is current_module:
+            if (
+                'feature_runtime' in sys.modules
+                and sys.modules['feature_runtime'] is current_module
+            ):
                 pass  # Keep it registered for subsequent loads
-        
+
         obj = cls(pca_components=payload["pca_components"])
         obj.meta = payload["meta"]
         obj.pca = payload["pca"]

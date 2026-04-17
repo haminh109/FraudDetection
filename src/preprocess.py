@@ -9,6 +9,7 @@ import pandas as pd
 from scipy.stats import chi2_contingency, spearmanr
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import LabelEncoder
+from src.validation import validate_binary_target, validate_dataframe
 
 
 logging.basicConfig(
@@ -343,6 +344,16 @@ def main():
         cat_min_freq=args.cat_min_freq,
     )
     df_processed = preprocessor.fit_transform(input_path)
+    validate_dataframe(
+        df_processed,
+        dataset_name="preprocessed dataset",
+        required_columns=["TransactionDT", "isFraud"],
+    )
+    validate_binary_target(
+        df_processed["isFraud"],
+        dataset_name="preprocessed dataset",
+        target_name="isFraud",
+    )
 
     if "TransactionDT" not in df_processed.columns:
         raise ValueError("TransactionDT column is required for time-based split.")
@@ -359,6 +370,9 @@ def main():
     logging.info("Train shape: %s | Val shape: %s", train_df.shape, val_df.shape)
     logging.info("Train fraud rate: %.4f", train_df["isFraud"].mean())
     logging.info("Val fraud rate: %.4f", val_df["isFraud"].mean())
+
+    validate_dataframe(train_df, dataset_name="train split")
+    validate_dataframe(val_df, dataset_name="validation split")
 
     train_out = output_dir / "train_preprocessed.parquet"
     val_out = output_dir / "val_preprocessed.parquet"

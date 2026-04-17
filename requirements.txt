@@ -11,3 +11,4 @@ pyarrow
 mlflow
 optuna
 pytest
+flake8
