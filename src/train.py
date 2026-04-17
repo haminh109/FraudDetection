@@ -533,28 +533,28 @@ def main():
         signature = infer_signature(input_example, y_pred_example)
 
         if best_model_name == "CatBoost":
-            mlflow.catboost.log_model(
+            logged_model_info = mlflow.catboost.log_model(
                 cb_model=best_model,
                 name="champion_model",
                 signature=signature,
                 input_example=input_example,
             )
         elif best_model_name == "XGBoost":
-            mlflow.xgboost.log_model(
+            logged_model_info = mlflow.xgboost.log_model(
                 xgb_model=best_model,
                 name="champion_model",
                 signature=signature,
                 input_example=input_example,
             )
         elif best_model_name == "LightGBM":
-            mlflow.lightgbm.log_model(
+            logged_model_info = mlflow.lightgbm.log_model(
                 lgb_model=best_model,
                 name="champion_model",
                 signature=signature,
                 input_example=input_example,
             )
         else:
-            mlflow.sklearn.log_model(
+            logged_model_info = mlflow.sklearn.log_model(
                 sk_model=best_model,
                 name="champion_model",
                 signature=signature,
@@ -563,7 +563,9 @@ def main():
 
         registered_model_info = None
         if args.register_model_name:
-            model_uri = f"runs:/{mlflow.active_run().info.run_id}/champion_model"
+            model_uri = getattr(logged_model_info, "model_uri", "") or (
+                f"runs:/{mlflow.active_run().info.run_id}/champion_model"
+            )
             registered_model = mlflow.register_model(
                 model_uri=model_uri,
                 name=args.register_model_name,
@@ -573,6 +575,7 @@ def main():
                 "model_version": str(registered_model.version),
                 "run_id": mlflow.active_run().info.run_id,
                 "model_uri": model_uri,
+                "logged_model_id": getattr(logged_model_info, "model_id", ""),
             }
             mlflow.log_param("register_model_name", args.register_model_name)
             mlflow.log_param("registered_model_version", registered_model.version)
