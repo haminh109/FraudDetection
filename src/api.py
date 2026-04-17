@@ -106,10 +106,22 @@ def get_probabilities(model: Any, X: pd.DataFrame) -> np.ndarray:
     raise ValueError(f"Model {type(model).__name__} does not support probability-like outputs.")
 
 
-artifact = load_artifact(MODEL_PATH)
-model = artifact["model"]
-model_name = artifact["model_name"]
-threshold = float(artifact["threshold"])
+def init_model_artifact() -> tuple[dict[str, Any] | None, str | None]:
+    try:
+        loaded_artifact = load_artifact(MODEL_PATH)
+        return loaded_artifact, None
+    except FileNotFoundError as exc:
+        logging.warning("Primary model artifact is unavailable: %s", exc)
+        return None, str(exc)
+    except Exception as exc:
+        logging.exception("Primary model artifact failed to initialize")
+        return None, str(exc)
+
+
+artifact, artifact_error = init_model_artifact()
+model = artifact["model"] if artifact else None
+model_name = artifact["model_name"] if artifact else "unavailable"
+threshold = float(artifact["threshold"]) if artifact else None
 
 app = FastAPI(
     title="IEEE Fraud Detection API",
@@ -140,7 +152,8 @@ raw_pipeline, raw_pipeline_error = init_raw_pipeline()
 @app.get("/health")
 def health():
     return {
-        "status": "ok",
+        "status": "ok" if artifact is not None else "degraded",
+        "model_ready": artifact is not None,
         "model_name": model_name,
         "threshold": threshold,
         "model_path": str(MODEL_PATH),
@@ -155,6 +168,15 @@ def predict(request: PredictionRequest):
     try:
         if not request.records:
             raise HTTPException(status_code=400, detail="records must not be empty")
+
+        if artifact is None or model is None:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Model artifact is unavailable. "
+                    f"Missing or invalid artifact: {artifact_error}"
+                ),
+            )
 
         df_input = pd.DataFrame(request.records)
         X = prepare_features(df_input, artifact)
