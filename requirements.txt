@@ -6,6 +6,7 @@ xgboost
 catboost
 joblib
 fastapi
+httpx
 uvicorn[standard]
 pyarrow
 mlflow
