@@ -8,3 +8,6 @@ joblib
 fastapi
 uvicorn[standard]
 pyarrow
+mlflow
+optuna
+pytest

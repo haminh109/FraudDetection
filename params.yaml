@@ -50,3 +50,7 @@ train:
 mlflow:
   experiment_name: ieee_fraud_detection
   run_name: tune_v1
+  register_model_name: fraud_detection_model
+  candidate_alias: candidate
+  candidate_tag_key: deployment_status
+  candidate_tag_value: Candidate

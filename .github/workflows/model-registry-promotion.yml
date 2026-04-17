@@ -1,0 +1,132 @@
+name: model-registry-promotion
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: "Specific MLflow model version to promote"
+        required: false
+        type: string
+      run_id:
+        description: "Promote the latest registered version from this MLflow run"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check Python syntax
+        run: python -m compileall src tests
+
+      - name: Run promotion unit tests
+        run: pytest -q tests
+
+  promote-candidate:
+    needs: ci
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/master' ||
+      github.ref == 'refs/heads/ldtesting'
+    runs-on: ubuntu-latest
+    env:
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+      MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+      DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+      INPUT_MODEL_VERSION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.model_version || '' }}
+      INPUT_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_id || '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Load registry settings from params.yaml
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_ENV"
+          from pathlib import Path
+          import re
+
+          text = Path("params.yaml").read_text(encoding="utf-8")
+          patterns = {
+              "MLFLOW_MODEL_NAME": r"^\s*register_model_name:\s*(.+)\s*$",
+              "MLFLOW_CANDIDATE_ALIAS": r"^\s*candidate_alias:\s*(.+)\s*$",
+              "MLFLOW_CANDIDATE_TAG_KEY": r"^\s*candidate_tag_key:\s*(.+)\s*$",
+              "MLFLOW_CANDIDATE_TAG_VALUE": r"^\s*candidate_tag_value:\s*(.+)\s*$",
+          }
+
+          for env_name, pattern in patterns.items():
+              match = re.search(pattern, text, re.MULTILINE)
+              if not match:
+                  raise SystemExit(f"Missing config for {env_name} in params.yaml")
+              print(f"{env_name}={match.group(1).strip()}")
+          PY
+
+      - name: Promote model version to Candidate
+        shell: bash
+        run: |
+          if [ -z "$MLFLOW_TRACKING_URI" ]; then
+            echo "Missing GitHub secret: MLFLOW_TRACKING_URI" >&2
+            exit 1
+          fi
+
+          if [[ "$MLFLOW_TRACKING_URI" == *"dagshub.com"* ]]; then
+            export MLFLOW_TRACKING_USERNAME="${MLFLOW_TRACKING_USERNAME:-$DAGSHUB_USERNAME}"
+            export MLFLOW_TRACKING_PASSWORD="${MLFLOW_TRACKING_PASSWORD:-$DAGSHUB_TOKEN}"
+
+            if [ -z "$MLFLOW_TRACKING_USERNAME" ] || [ -z "$MLFLOW_TRACKING_PASSWORD" ]; then
+              echo "DagsHub MLflow requires auth secrets." >&2
+              echo "Add MLFLOW_TRACKING_USERNAME + MLFLOW_TRACKING_PASSWORD" >&2
+              echo "or DAGSHUB_USERNAME + DAGSHUB_TOKEN." >&2
+              exit 1
+            fi
+          fi
+
+          cmd=(
+            python src/promote_model.py
+            --tracking-uri "$MLFLOW_TRACKING_URI"
+            --model-name "$MLFLOW_MODEL_NAME"
+            --candidate-alias "$MLFLOW_CANDIDATE_ALIAS"
+            --candidate-tag-key "$MLFLOW_CANDIDATE_TAG_KEY"
+            --candidate-tag-value "$MLFLOW_CANDIDATE_TAG_VALUE"
+          )
+
+          if [ -n "$INPUT_MODEL_VERSION" ]; then
+            cmd+=(--version "$INPUT_MODEL_VERSION")
+          fi
+
+          if [ -n "$INPUT_RUN_ID" ]; then
+            cmd+=(--run-id "$INPUT_RUN_ID")
+          fi
+
+          "${cmd[@]}"

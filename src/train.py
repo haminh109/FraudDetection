@@ -561,9 +561,26 @@ def main():
                 input_example=input_example,
             )
 
+        registered_model_info = None
         if args.register_model_name:
             model_uri = f"runs:/{mlflow.active_run().info.run_id}/champion_model"
-            mlflow.register_model(model_uri=model_uri, name=args.register_model_name)
+            registered_model = mlflow.register_model(
+                model_uri=model_uri,
+                name=args.register_model_name,
+            )
+            registered_model_info = {
+                "model_name": args.register_model_name,
+                "model_version": str(registered_model.version),
+                "run_id": mlflow.active_run().info.run_id,
+                "model_uri": model_uri,
+            }
+            mlflow.log_param("register_model_name", args.register_model_name)
+            mlflow.log_param("registered_model_version", registered_model.version)
+            logging.info(
+                "Registered model %s version %s",
+                args.register_model_name,
+                registered_model.version,
+            )
 
         output = {
             "training_setup": {
@@ -584,6 +601,7 @@ def main():
             "best_model_tuned_metrics": tuned_metrics,
             "best_params_by_model": best_params_by_model,
             "all_results": all_results,
+            "registered_model": registered_model_info,
         }
 
         with open(metrics_path, "w", encoding="utf-8") as f:

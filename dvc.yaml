@@ -77,6 +77,7 @@ stages:
       --tune_models ${train.tune_models}
       --mlflow_experiment ${mlflow.experiment_name}
       --mlflow_run_name ${mlflow.run_name}
+      --register_model_name ${mlflow.register_model_name}
     deps:
       - src/train.py
       - data/balanced/X_train_rus.parquet
@@ -94,6 +95,7 @@ stages:
       - train.tune_models
       - mlflow.experiment_name
       - mlflow.run_name
+      - mlflow.register_model_name
     outs:
       - models/model.pkl
     metrics:

@@ -75,6 +75,46 @@ Open UI:
 http://127.0.0.1:5000
 ```
 
+### Model Registry Promotion
+
+The training pipeline now registers the champion model to MLflow using
+`mlflow.register_model_name` from `params.yaml`.
+
+`Candidate` is represented in MLflow by:
+
+* registered model alias: `candidate`
+* model version tag: `deployment_status=Candidate`
+
+Promote the latest registered version manually:
+
+```bash
+python src/promote_model.py --model-name fraud_detection_model --tracking-uri "$MLFLOW_TRACKING_URI"
+```
+
+GitHub Actions workflow `.github/workflows/model-registry-promotion.yml`
+will promote the model automatically after the CI job passes on
+`main`, `master`, or `ldtesting`.
+
+Required GitHub secret:
+
+```bash
+MLFLOW_TRACKING_URI=<your-remote-mlflow-uri>
+```
+
+If the remote registry is hosted on DagsHub, add one of these secret pairs:
+
+```bash
+MLFLOW_TRACKING_USERNAME=<your-dagshub-username>
+MLFLOW_TRACKING_PASSWORD=<your-dagshub-access-token>
+```
+
+or:
+
+```bash
+DAGSHUB_USERNAME=<your-dagshub-username>
+DAGSHUB_TOKEN=<your-dagshub-access-token>
+```
+
 ---
 
 ## API (Live Inference)
