@@ -526,7 +526,13 @@ def main():
             "best_params_by_model": best_params_by_model,
         }
         joblib.dump(artifact, model_path)
-        mlflow.log_artifact(str(model_path), artifact_path="local_artifacts")
+        if tracking_uri.startswith("file:"):
+            mlflow.log_artifact(str(model_path), artifact_path="local_artifacts")
+        else:
+            logging.info(
+                "Skipping duplicate upload of %s for remote MLflow tracking.",
+                model_path,
+            )
 
         input_example = X_val.head(5)
         y_pred_example = get_proba(best_model, input_example)
