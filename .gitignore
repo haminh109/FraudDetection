@@ -1,3 +1,14 @@
+
+data/*
+!data/*.dvc             
+venv/
+.env
+.DS_Store
+Thumbs.db
+.dvc/config.local
+
+/data
+/artifacts
 # DVC
 .dvc/cache/
 .dvc/config.local
@@ -17,5 +28,10 @@ __pycache__/
 *.pyc
 
 # Notebook
+<<<<<<< HEAD
 *.ipynb.DS_Store
 .DS_Store
+=======
+*.ipynb
+>>>>>>> 42deab75f6c745885fdac8dd40c0b20f5075d102
+>>>>>>> origin/main

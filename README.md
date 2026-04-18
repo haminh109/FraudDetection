@@ -1,5 +1,4 @@
 ## Setup
-
 ### 1. Clone repository
 
 ```bash
@@ -136,3 +135,12 @@ docker compose up --build
 ```
 models/model.pkl
 ```
+=======
+How to pull code and data:
+1. git pull origin main
+2. pip install dvc[s3] dagshub
+3. dagshub setup dvc --repo_name DVC_Fraud_Detection --owner rizerize-1
+Then click 'Accept'
+4. dvc pull -r origin
+
+>>>>>>> origin/main

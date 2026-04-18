@@ -1,14 +1,15 @@
 import logging
 from pathlib import Path
 from typing import Any
-
+import os
+from datetime import datetime
 import joblib
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from src.inference_pipeline import RawInferencePipeline
-
+from prometheus_fastapi_instrumentator import Instrumentator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,7 +17,9 @@ logging.basicConfig(
 )
 
 MODEL_PATH = Path("models/model.pkl")
-
+LOG_DIR = Path("logs")
+LOG_DIR.mkdir(exist_ok=True) 
+INFERENCE_LOG_FILE = LOG_DIR / "inference_history.csv"
 
 class PredictionRequest(BaseModel):
     records: list[dict[str, Any]] = Field(..., description="List of feature dictionaries")
@@ -107,6 +110,15 @@ def get_probabilities(model: Any, X: pd.DataFrame) -> np.ndarray:
 
     raise ValueError(f"Model {type(model).__name__} does not support probability-like outputs.")
 
+def log_inference_data(input_records: list, probabilities: np.ndarray, predictions: np.ndarray):
+    df_log = pd.DataFrame(input_records)
+    df_log['fraud_probability'] = probabilities
+    df_log['prediction'] = predictions
+    df_log['timestamp'] = datetime.now()
+    
+    header = not INFERENCE_LOG_FILE.exists()
+    df_log.to_csv(INFERENCE_LOG_FILE, mode='a', header=header, index=False)
+
 
 artifact = load_artifact(MODEL_PATH)
 model = artifact["model"]
@@ -119,12 +131,16 @@ app = FastAPI(
     description="Live inference API for fraud probability prediction."
 )
 
+<<<<<<< HEAD
 raw_pipeline = RawInferencePipeline(
     preprocessor_path="models/preprocessor_v1.pkl",
     feature_artifact_path="artifacts/fe_artifact.pkl",
     model_artifact_path="models/model.pkl",
 )
 
+=======
+Instrumentator().instrument(app).expose(app)
+>>>>>>> origin/main
 
 @app.get("/health")
 def health():
@@ -146,6 +162,8 @@ def predict(request: PredictionRequest):
         X = prepare_features(df_input, artifact)
         probabilities = get_probabilities(model, X)
         predictions = (probabilities >= threshold).astype(int)
+
+        log_inference_data(request.records, probabilities, predictions)
 
         results = []
         for i, row in enumerate(request.records):
