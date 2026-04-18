@@ -6,6 +6,7 @@
 .venv/
 venv/
 env/
+.tools/
 .env
 .DS_Store
 Thumbs.db

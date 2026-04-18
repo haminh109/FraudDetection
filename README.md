@@ -217,6 +217,8 @@ The lecture K8s deployment pattern is implemented with:
 - [deployment.yaml](deployment.yaml)
 - [service.yaml](service.yaml)
 - [deployment/kubernetes](deployment/kubernetes/README.md)
+- [scripts/install-local-k8s-tools.sh](scripts/install-local-k8s-tools.sh)
+- [scripts/run-k8s-e2e.sh](scripts/run-k8s-e2e.sh)
 
 Quick start with `kind`:
 
@@ -226,6 +228,12 @@ docker build -t ghcr.io/team-5-fraud-dectection/mlops-fraud-detection:latest .
 kind load docker-image ghcr.io/team-5-fraud-dectection/mlops-fraud-detection:latest --name mlops-cluster
 kubectl apply -k deployment/kubernetes
 kubectl rollout status deployment/ml-api
+```
+
+Fastest full local verification:
+
+```bash
+RECREATE_CLUSTER=true bash scripts/run-k8s-e2e.sh
 ```
 
 Access the deployed API:
@@ -361,6 +369,16 @@ helm upgrade --install prom \
   -f deployment/monitoring/kube-prometheus-stack-values.yaml
 kubectl apply -k deployment/monitoring
 ```
+
+If you want one command for the whole flow, `scripts/run-k8s-e2e.sh` already performs:
+
+- local install of `kind` and `helm` into `.tools/bin`
+- cluster creation
+- Docker image build + `kind load docker-image`
+- API deployment rollout
+- Prometheus/Grafana installation
+- `ServiceMonitor` apply
+- scrape verification against Prometheus API
 
 Access:
 

@@ -39,3 +39,11 @@ def test_servicemonitor_scrapes_metrics_endpoint():
     assert service_monitor["spec"]["selector"]["matchLabels"]["app"] == "ml-api"
     assert endpoint["port"] == "http"
     assert endpoint["path"] == "/metrics"
+
+
+def test_kind_cluster_config_maps_api_and_monitoring_nodeports():
+    kind_config = load_yaml("deployment/kubernetes/kind-three-node-cluster.yaml")
+    mappings = kind_config["nodes"][0]["extraPortMappings"]
+    host_ports = sorted(mapping["hostPort"] for mapping in mappings)
+
+    assert host_ports == [30007, 30200, 30300]
