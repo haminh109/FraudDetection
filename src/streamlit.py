@@ -12,20 +12,27 @@ API_URL = "http://127.0.0.1:8000/predict_raw"
 HEALTH_URL = "http://127.0.0.1:8000/health"
 
 # ====================== UTILS ======================
+
+
 def clean_data(obj):
     if isinstance(obj, float):
-        if np.isnan(obj) or np.isinf(obj): return None
+        if np.isnan(obj) or np.isinf(obj):
+            return None
         return obj
-    if isinstance(obj, dict): return {k: clean_data(v) for k, v in obj.items()}
-    if isinstance(obj, list): return [clean_data(i) for i in obj]
+    if isinstance(obj, dict):
+        return {k: clean_data(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [clean_data(i) for i in obj]
     return obj
+
 
 @st.cache_data(ttl=60)
 def check_health():
     try:
         return requests.get(HEALTH_URL, timeout=5).json()
-    except:
+    except requests.RequestException:
         return None
+
 
 # ====================== SIDEBAR ======================
 with st.sidebar:
@@ -47,7 +54,7 @@ with st.sidebar:
 st.title("💳 Fraud Detection System")
 
 uploaded = st.file_uploader("Upload JSON file", type=["json"])
-    
+
 if uploaded:
     try:
         data = json.load(uploaded)
@@ -67,11 +74,11 @@ if uploaded:
 
                 if res.status_code == 200:
                     df = pd.DataFrame(res.json().get("results", []))
-                    if 'TransactionID' in df_input.columns:
-                        df['TransactionID'] = df_input['TransactionID'].values
+                    if "TransactionID" in df_input.columns:
+                        df["TransactionID"] = df_input["TransactionID"].values
                     else:
                         st.error("Column 'TransactionID' is not found!")
-                        
+
                     fraud_count = (df["prediction"] == 1).sum()
                     total = len(df)
                     col1, col2, col3, col4 = st.columns(4)
@@ -79,12 +86,14 @@ if uploaded:
                     col2.metric("Fraud Cases", fraud_count)
                     col3.metric("Fraud Rate", f"{fraud_count/total:.2%}")
                     col4.metric("Average Risk Score", f"{df['risk_score'].mean():.2f}")
-                    
+
                     st.markdown("---")
-                    
-                    cols_to_show = [c for c in df.columns if c not in ['request_id', 'prediction_id']]
+
+                    cols_to_show = [
+                        c for c in df.columns if c not in ["request_id", "prediction_id"]
+                    ]
                     df_display = df[cols_to_show]
-                    
+
                     st.subheader("🚨 Prediction Summary")
                     st.dataframe(
                         df_display.sort_values("fraud_probability", ascending=False),
@@ -96,26 +105,40 @@ if uploaded:
                             ),
                         }
                     )
-                    
+
                     # ===== CHART =====
                     col_chart1, col_chart2 = st.columns(2)
                     with col_chart1:
                         st.markdown("### 📈 Distribution")
-                        fig = px.histogram(df, x="fraud_probability", nbins=20, color_discrete_sequence=['#ef4444'])
+                        fig = px.histogram(
+                            df,
+                            x="fraud_probability",
+                            nbins=20,
+                            color_discrete_sequence=["#ef4444"],
+                        )
                         st.plotly_chart(fig, use_container_width=True)
-                                                
+
                     with col_chart2:
                         st.markdown("### 📊 Fraud vs Clean Rate")
-                        fig_pie = px.pie(df, names='prediction', hole=0.3, color_discrete_sequence=['#22c55e', '#ef4444'])
+                        fig_pie = px.pie(
+                            df,
+                            names="prediction",
+                            hole=0.3,
+                            color_discrete_sequence=["#22c55e", "#ef4444"],
+                        )
                         st.plotly_chart(fig_pie, use_container_width=True)
 
-                        # ===== DOWNLOAD =====
-                    st.download_button("Download Results", df.to_csv(index=False), "fraud_results.csv")
+                    # ===== DOWNLOAD =====
+                    st.download_button(
+                        "Download Results",
+                        df.to_csv(index=False),
+                        "fraud_results.csv",
+                    )
 
                 else:
                     st.error(res.text)
 
     except Exception as e:
         st.error(f"Error: {e}")
-                    
+
 st.caption("Fraud Detection System | FastAPI + Streamlit | Demo")
