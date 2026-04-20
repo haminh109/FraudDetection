@@ -1,3 +1,7 @@
+download:
+  competition: ieee-fraud-detection
+  dest_dir: data/raw
+  
 preprocess:
   input_path: data/merged_train_data.csv
   output_dir: data/processed
